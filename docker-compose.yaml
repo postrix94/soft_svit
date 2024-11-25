@@ -1,0 +1,77 @@
+version: "3.9"
+
+networks:
+  db:
+    driver: bridge
+  rabbitmq:
+    driver: bridge
+
+volumes:
+  rabbitmq_data:
+
+services:
+  php:
+    container_name: backend
+    build:
+      context: .
+      dockerfile: ./php/Dockerfile
+    volumes:
+      - ./src:/var/www/soft-svit
+    ports:
+      - "80:80"
+    networks:
+      db:
+      rabbitmq:
+    depends_on:
+      - database
+
+  database:
+    container_name: mysql
+    build:
+      context: .
+      dockerfile: ./db/Dockerfile
+    env_file:
+      - .env
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    volumes:
+      - ./db/mysql/soft-svit:/var/lib/mysql
+    networks:
+      db:
+    ports:
+      - "3306:3306"
+
+  php_my_admin:
+    container_name: php_my_admin
+    build:
+      context: .
+      dockerfile: ./php_my_admin/Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: database
+    depends_on:
+      - database
+    networks:
+      db:
+
+  rabbitmq:
+    image: "rabbitmq:management"
+    container_name: rabbitmq
+    ports:
+      - "15672:15672"
+      - "5672:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    depends_on:
+      - php
+    restart: always
+    networks:
+      rabbitmq:
+
+
+
+
